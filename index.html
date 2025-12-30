@@ -99,7 +99,7 @@
         <div class="input-group">
             <label>AIHubMix API Key</label>
             <div class="modern-input-wrapper">
-                <input type="password" id="apiKeyInput" placeholder="在此输入你的 API 令牌（选填）">
+                <input type="password" id="apiKeyInput" oninput="saveApiKey()">
             </div>
         </div>
 
@@ -157,7 +157,6 @@
     let currentLang = 'zh';
     let tags = { brand: [], product: [] };
 
-    // 修复：补全中英文占位符和操作按钮字段
     const i18n = {
         en: {
             title: "Image Rename Pro + AI", langBtn: "切换至 中文", configH3: "Settings",
@@ -183,7 +182,20 @@
         }
     };
 
-    // --- 修复后的拖拽功能 ---
+    // --- API Key 缓存逻辑 ---
+    function saveApiKey() {
+        const key = document.getElementById('apiKeyInput').value.trim();
+        localStorage.setItem('rename_ai_key', key);
+    }
+
+    function loadApiKey() {
+        const savedKey = localStorage.getItem('rename_ai_key');
+        if (savedKey) {
+            document.getElementById('apiKeyInput').value = savedKey;
+        }
+    }
+
+    // --- 拖拽功能 ---
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('fileInput');
 
@@ -203,7 +215,7 @@
         refreshList();
     }
 
-    // --- AI 逻辑：优化描述长度与语言 ---
+    // --- AI 逻辑 ---
     async function generateAIDescriptions() {
         const apiKey = document.getElementById('apiKeyInput').value.trim();
         if (!apiKey) { alert(currentLang === 'zh' ? "请输入 API Key！" : "Please input API Key!"); return; }
@@ -255,11 +267,10 @@
         });
 
         const data = await response.json();
-        // 自动清洗：转小写，替换非法字符
         return data.choices[0].message.content.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
     }
 
-    // --- 界面核心逻辑 ---
+    // --- 界面逻辑 ---
     function refreshList() {
         const brand = document.getElementById('brandInput').value.trim();
         const product = document.getElementById('productInput').value.trim();
@@ -296,6 +307,7 @@
     window.onload = () => {
         const saved = localStorage.getItem('rename_tags_ai_vfinal');
         if (saved) { tags = JSON.parse(saved); renderTags('brand'); renderTags('product'); }
+        loadApiKey(); // 加载缓存的 API Key
         updateUI();
     };
 
@@ -315,7 +327,7 @@
         document.getElementById('ui-lang-btn').innerText = lang.langBtn;
         document.getElementById('ui-config-h3').innerText = lang.configH3;
         document.getElementById('ui-drop-text').innerText = lang.dropZone;
-        document.getElementById('apiKeyInput').placeholder = lang.apiKeyPlaceholder; // 修复占位符翻译
+        document.getElementById('apiKeyInput').placeholder = lang.apiKeyPlaceholder; 
         document.getElementById('ui-brand-label').innerText = lang.brandLabel;
         document.getElementById('brandInput').placeholder = lang.brandPlaceholder;
         document.getElementById('ui-product-label').innerText = lang.productLabel;
