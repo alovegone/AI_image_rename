@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>Image Rename Pro + AI (Dynamic Selection)</title>
+    <title>Image Rename Pro + AI (V2.2 稳定增强版)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     
@@ -85,15 +85,17 @@
         .alt-ai-style { color: var(--ai-alt); font-weight: 500; }
 
         .btn { padding: 10px; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; transition: 0.2s; font-size: 13px; }
+        .btn-rule { background: var(--primary); color: white; margin-bottom: 10px; }
         .btn-phrase { background: var(--ai-phrase); color: white; margin-top: 5px; }
         .btn-alt { background: var(--ai-alt); color: white; margin-top: 5px; }
         .btn-success { background: var(--success); color: white; margin-top: 5px; }
         .btn-info { background: var(--info); color: white; margin-top: 5px; }
         .btn-outline { background: transparent; border: 1px solid var(--border); }
         
-        .btn-mini { padding: 4px 8px; font-size: 11px; background: #fff; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; margin-right: 4px;}
+        .btn-mini { padding: 4px 8px; font-size: 11px; background: #fff; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; margin-right: 4px; transition: all 0.2s;}
         .btn-dl { color: var(--success); border-color: #D1F2D9; }
         .btn-del { color: var(--danger); border-color: #FFD5D2; }
+        .btn-copied { background: var(--success) !important; color: white !important; border-color: var(--success) !important; }
         
         .thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; cursor: zoom-in; }
         .chk-col { width: 40px; text-align: center; }
@@ -122,7 +124,7 @@
         <div class="input-group">
             <label id="ui-brand-label">品牌名称</label>
             <div class="modern-input-wrapper">
-                <input type="text" id="brandInput" oninput="refreshList()" placeholder="">
+                <input type="text" id="brandInput" placeholder="输入品牌">
                 <button class="btn-add-tag" onclick="addTag('brand')">+</button>
             </div>
             <div id="brand-tags" class="tag-container"></div>
@@ -131,19 +133,21 @@
         <div class="input-group">
             <label id="ui-product-label">产品名称</label>
             <div class="modern-input-wrapper">
-                <input type="text" id="productInput" oninput="refreshList()" placeholder="">
+                <input type="text" id="productInput" placeholder="输入产品名">
                 <button class="btn-add-tag" onclick="addTag('product')">+</button>
             </div>
             <div id="product-tags" class="tag-container"></div>
         </div>
         
         <label id="ui-manual-label">手动描述列表</label>
-        <textarea id="manualDescInput" oninput="refreshList()" placeholder=""></textarea>
+        <textarea id="manualDescInput" placeholder="每行对应一张图..."></textarea>
+        
+        <button class="btn btn-rule" id="ui-apply-rule" onclick="applyGlobalRule()">⚡ 应用命名规则到预览</button>
 
         <button class="btn btn-phrase" id="btnPhrase" onclick="runAI('phrase')">✨ AI 生成名称 (全部)</button>
         <button class="btn btn-alt" id="btnAlt" onclick="runAI('alt')">📝 AI 生成 Alt (全部)</button>
         <button class="btn btn-info" id="ui-txt-btn" onclick="downloadTxt()">📄 下载清单 (全部)</button>
-        <button class="btn btn-success" id="zipBtn" disabled onclick="downloadAll()">📦 打包下载 (全部)</button>
+        <button class="btn btn-success" id="zipBtn" disabled onclick="downloadAll()">📦 打包下载 (ZIP + TXT)</button>
     </div>
 
     <div class="preview-panel">
@@ -185,10 +189,11 @@
 
 <script>
     let files = [];
-    let currentLang = 'zh';
-    let tags = { brand: [], product: [] };
+    let customNames = []; 
     let aiPhrases = []; 
     let aiAlts = [];    
+    let currentLang = 'zh';
+    let tags = { brand: [], product: [] };
     let selectedIndices = new Set(); 
 
     const defaultSettings = {
@@ -201,25 +206,23 @@
         en: {
             title: "Image Rename Pro + AI", langBtn: "中文", settingsBtn: "⚙️ Settings",
             brandLabel: "Brand", productLabel: "Product", manualLabel: "Manual",
-            brandPh: "Brand", productPh: "Name", manualPh: "One line per image...",
-            btnPhrase: "✨ AI Name", btnAlt: "📝 AI Alt", 
-            txtBtn: "📄 Download TXT", zipBtn: "📦 Download ZIP",
+            btnPhrase: "✨ AI Name", btnAlt: "📝 AI Alt", applyRule: "⚡ Apply Naming Rule",
+            txtBtn: "📄 Download TXT", zipBtn: "📦 Download ZIP + TXT",
             thImg: "Preview", thName: "New Name & Alt", thAction: "Action",
-            copy: "Copy", del: "Del", dl: "DL", dropZone: "📁 Click/Drag",
+            copy: "Copy", copied: "Copied!", del: "Del", dl: "DL", dropZone: "📁 Click/Drag",
             settingH3: "⚙️ AI Config", settingSave: "Save", ruleP: "Name Rule", ruleA: "Alt Rule",
-            previewH3: "Preview", statusDone: "Done.", exportTime: "Exported: ", selCount: "Selected: ",
+            previewH3: "Preview", statusDone: "Done.", selCount: "Selected: ",
             all: "(All)", selected: "(Selected)"
         },
         zh: {
             title: "图片重命名专业版 + AI", langBtn: "English", settingsBtn: "⚙️ 设置",
             brandLabel: "品牌名称", productLabel: "产品名称", manualLabel: "手动描述",
-            brandPh: "品牌", productPh: "产品名称", manualPh: "每行对应一张图...",
-            btnPhrase: "✨ AI 生成名称", btnAlt: "📝 AI 生成 Alt", 
-            txtBtn: "📄 下载清单 (TXT)", zipBtn: "📦 打包下载 (ZIP)",
+            btnPhrase: "✨ AI 生成名称", btnAlt: "📝 AI 生成 Alt", applyRule: "⚡ 应用命名规则到预览",
+            txtBtn: "📄 下载清单 (TXT)", zipBtn: "📦 打包下载 (ZIP + TXT)",
             thImg: "预览", thName: "新文件名 & Alt Text", thAction: "操作",
-            copy: "复制", del: "移除", dl: "下载", dropZone: "📁 点击或拖入图片",
+            copy: "复制", copied: "已复制！", del: "移除", dl: "下载", dropZone: "📁 点击或拖入图片",
             settingH3: "⚙️ AI 配置中心", settingSave: "保存配置", ruleP: "文件名规则", ruleA: "Alt Text 规则",
-            previewH3: "重命名预览", statusDone: "完成。", exportTime: "导出时间: ", selCount: "已选择: ",
+            previewH3: "重命名预览", statusDone: "完成。", selCount: "已选择: ",
             all: "(全部)", selected: "(所选)"
         }
     };
@@ -256,8 +259,30 @@
     function addFiles(incoming) {
         const newFiles = Array.from(incoming).filter(f => f.type.startsWith('image/'));
         newFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true}));
-        newFiles.forEach(() => { aiPhrases.push(""); aiAlts.push(""); });
-        files = [...files, ...newFiles];
+        
+        newFiles.forEach((f) => { 
+            files.push(f);
+            aiPhrases.push(""); 
+            aiAlts.push(""); 
+            customNames.push(f.name);
+        });
+        refreshList();
+    }
+
+    function applyGlobalRule() {
+        const brand = document.getElementById('brandInput').value.trim();
+        const product = document.getElementById('productInput').value.trim();
+        const manualDescs = document.getElementById('manualDescInput').value.split('\n');
+
+        files.forEach((file, i) => {
+            const ext = file.name.split('.').pop();
+            const sn = (i + 1).toString().padStart(2, '0');
+            let desc = (manualDescs[i] && manualDescs[i].trim()) ? manualDescs[i].trim().replace(/\s+/g, '_') : aiPhrases[i];
+            let newName = [brand, product, sn, desc].filter(Boolean).join('_') + '.' + ext;
+            if (brand || product || desc) {
+                customNames[i] = newName;
+            }
+        });
         refreshList();
     }
 
@@ -276,9 +301,8 @@
         const countSuffix = hasSelection ? `${L.selected} [${selectedIndices.size}]` : L.all;
         
         document.getElementById('ui-select-count').innerText = `${L.selCount} ${selectedIndices.size}`;
-        document.getElementById('selectAll').checked = selectedIndices.size === files.length && files.length > 0;
+        document.getElementById('selectAll').checked = (selectedIndices.size === files.length && files.length > 0);
         
-        // 动态更新所有动作按钮文字
         document.getElementById('btnPhrase').innerText = `${L.btnPhrase} ${countSuffix}`;
         document.getElementById('btnAlt').innerText = `${L.btnAlt} ${countSuffix}`;
         document.getElementById('ui-txt-btn').innerText = `${L.txtBtn} ${countSuffix}`;
@@ -286,8 +310,8 @@
     }
 
     function downloadSingle(idx) {
-        const finalName = document.getElementById(`name_${idx}`).value;
-        saveAs(files[idx], finalName);
+        const safeName = customNames[idx].replace(/[\\/:*?"<>|]/g, "_");
+        saveAs(files[idx], safeName);
     }
 
     function downloadTxt() {
@@ -296,19 +320,42 @@
         saveAs(new Blob([generateTxtContent(targets)], {type: "text/plain"}), `Image_List.txt`);
     }
 
+    // 更新：打包下载时自动加入 TXT 文件
     async function downloadAll() {
         const targets = selectedIndices.size > 0 ? Array.from(selectedIndices) : files.map((_, i) => i);
         if (targets.length === 0) return;
+        
         const zip = new JSZip();
-        targets.forEach(idx => zip.file(document.getElementById(`name_${idx}`).value, files[idx]));
-        const blob = await zip.generateAsync({type: "blob"});
-        saveAs(blob, `Images_Batch.zip`);
+        const statusEl = document.getElementById('status');
+        statusEl.innerText = "正在打包，请稍候...";
+
+        // 添加图片
+        targets.forEach(idx => {
+            let cleanName = customNames[idx].replace(/[\\/:*?"<>|]/g, "_");
+            zip.file(cleanName, files[idx]);
+        });
+
+        // 自动添加清单 TXT
+        const txtContent = generateTxtContent(targets);
+        zip.file("Image_Details_List.txt", txtContent);
+        
+        try {
+            const blob = await zip.generateAsync({
+                type: "blob",
+                compression: "DEFLATE",
+                compressionOptions: { level: 6 }
+            });
+            saveAs(blob, `Batch_Rename_${Date.now()}.zip`);
+            statusEl.innerText = i18n[currentLang].statusDone;
+        } catch (e) {
+            statusEl.innerText = "打包失败: " + e.message;
+        }
     }
 
     function generateTxtContent(targetIndices) {
-        let content = `Exported: ${new Date().toLocaleString()}\n---\n`;
+        let content = `导出清单 (导出时间: ${new Date().toLocaleString()})\n${"=".repeat(40)}\n`;
         targetIndices.forEach(idx => {
-            content += `FILE: ${document.getElementById(`name_${idx}`).value}\nALT: ${document.getElementById(`alt_${idx}`).value}\n---\n`;
+            content += `[${idx+1}] 新文件名: ${customNames[idx]}\n    ALT 文字: ${aiAlts[idx] || "未生成"}\n${"-".repeat(40)}\n`;
         });
         return content;
     }
@@ -318,7 +365,7 @@
         if (!config.apiKey) return alert("请在设置中填写 API Key");
 
         const targets = selectedIndices.size > 0 ? Array.from(selectedIndices) : files.map((_, i) => i);
-        if (targets.length === 0) return alert("列表中没有图片");
+        if (targets.length === 0) return alert("未选择图片");
 
         const btn = document.getElementById(type === 'phrase' ? 'btnPhrase' : 'btnAlt');
         const originalText = btn.innerText;
@@ -332,14 +379,19 @@
                 const result = await callVisionAPI(files[idx], config.apiKey, prompt);
                 
                 if (type === 'phrase') {
-                    aiPhrases[idx] = result.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+                    const cleanPhrase = result.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+                    aiPhrases[idx] = cleanPhrase;
+                    const ext = files[idx].name.split('.').pop();
+                    const brand = document.getElementById('brandInput').value.trim();
+                    const product = document.getElementById('productInput').value.trim();
+                    const sn = (idx + 1).toString().padStart(2, '0');
+                    customNames[idx] = [brand, product, sn, cleanPhrase].filter(Boolean).join('_') + '.' + ext;
                 } else {
                     aiAlts[idx] = result;
                 }
                 refreshList(); 
             } catch (err) {
                 console.error("AI Error:", err);
-                document.getElementById('status').innerText = `第 ${idx+1} 张图失败: ${err.message}`;
             }
         }
         
@@ -376,30 +428,23 @@
     }
 
     function refreshList() {
-        const brand = document.getElementById('brandInput').value.trim();
-        const product = document.getElementById('productInput').value.trim();
-        const manualDescs = document.getElementById('manualDescInput').value.split('\n');
         const container = document.getElementById('listContainer');
         container.innerHTML = '';
         document.getElementById('zipBtn').disabled = files.length === 0;
 
         files.forEach((file, i) => {
-            const ext = file.name.split('.').pop();
-            const sn = (i + 1).toString().padStart(2, '0');
-            let desc = (manualDescs[i] && manualDescs[i].trim()) ? manualDescs[i].trim().replace(/\s+/g, '_') : aiPhrases[i];
-            let newName = (!brand && !product && !desc) ? file.name : [brand, product, sn, desc].filter(Boolean).join('_') + '.' + ext;
-            let altVal = aiAlts[i] || (desc ? desc.replace(/_/g, ' ') : "");
             const imgUrl = URL.createObjectURL(file);
-
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td class="chk-col"><input type="checkbox" ${selectedIndices.has(i)?'checked':''} onclick="updateSelect(${i}, this.checked)"></td>
                 <td><img src="${imgUrl}" class="thumb" onclick="openLightbox('${imgUrl}')"></td>
                 <td>
-                    <input type="text" class="name-edit" id="name_${i}" value="${newName}">
+                    <input type="text" class="name-edit" id="name_${i}" value="${customNames[i]}" 
+                           oninput="customNames[${i}] = this.value">
                     <div class="alt-box-group">
-                        <input type="text" class="alt-input ${aiAlts[i]?'alt-ai-style':''}" id="alt_${i}" value="${altVal}">
-                        <button class="btn-mini" onclick="copyId('alt_${i}')">${i18n[currentLang].copy}</button>
+                        <input type="text" class="alt-input ${aiAlts[i]?'alt-ai-style':''}" id="alt_${i}" 
+                               value="${aiAlts[i] || ""}" oninput="aiAlts[${i}] = this.value">
+                        <button class="btn-mini" onclick="copyId('alt_${i}', this)">${i18n[currentLang].copy}</button>
                     </div>
                 </td>
                 <td>
@@ -412,15 +457,40 @@
         updateCounters();
     }
 
-    function removeFile(i) { files.splice(i, 1); aiPhrases.splice(i, 1); aiAlts.splice(i, 1); selectedIndices.delete(i); refreshList(); }
+    // 更新：复制反馈提示
+    function copyId(id, btn) { 
+        const el = document.getElementById(id); 
+        el.select(); 
+        document.execCommand('copy'); 
+        
+        // 视觉反馈效果
+        const originalText = btn.innerText;
+        btn.innerText = i18n[currentLang].copied;
+        btn.classList.add('btn-copied');
+        
+        setTimeout(() => {
+            btn.innerText = originalText;
+            btn.classList.remove('btn-copied');
+        }, 1500);
+    }
+
+    function removeFile(i) { 
+        files.splice(i, 1); 
+        aiPhrases.splice(i, 1); 
+        aiAlts.splice(i, 1); 
+        customNames.splice(i, 1);
+        selectedIndices.delete(i); 
+        refreshList(); 
+    }
+    
     function toggleLanguage() { currentLang = currentLang === 'zh' ? 'en' : 'zh'; updateUI(); }
-    function copyId(id) { const el = document.getElementById(id); el.select(); document.execCommand('copy'); }
+    
     function addTag(type) {
         const val = document.getElementById(type + 'Input').value.trim();
         if (val && !tags[type].includes(val)) { tags[type].push(val); renderTags(type); }
     }
     function renderTags(type) {
-        document.getElementById(type + '-tags').innerHTML = tags[type].map(t => `<div class="tag" onclick="document.getElementById('${type}Input').value='${t}';refreshList();">${t}</div>`).join('');
+        document.getElementById(type + '-tags').innerHTML = tags[type].map(t => `<div class="tag" onclick="document.getElementById('${type}Input').value='${t}';">${t}</div>`).join('');
     }
     function updateUI() {
         const L = i18n[currentLang];
@@ -431,6 +501,7 @@
         document.getElementById('ui-brand-label').innerText = L.brandLabel;
         document.getElementById('ui-product-label').innerText = L.productLabel;
         document.getElementById('ui-manual-label').innerText = L.manualLabel;
+        document.getElementById('ui-apply-rule').innerText = L.applyRule;
         document.getElementById('ui-preview-h3').innerText = L.previewH3;
         document.getElementById('ui-th-img').innerText = L.thImg;
         document.getElementById('ui-th-name').innerText = L.thName;
