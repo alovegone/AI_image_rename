@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>Image Rename Pro + AI</title>
+    <title>Image Rename Pro + AI (Dynamic Selection)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     
@@ -13,7 +13,9 @@
             --primary-light: #E5F1FF;
             --danger: #FF3B30;
             --success: #34C759;
-            --ai-color: #8E44AD;
+            --info: #5856D6;
+            --ai-phrase: #8E44AD;
+            --ai-alt: #2980B9;
             --bg: #F5F5F7;
             --card-bg: #FFFFFF;
             --border: #D1D1D6;
@@ -28,11 +30,20 @@
         }
         
         .header { display: flex; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto 15px; }
-        .lang-switch { cursor: pointer; padding: 6px 16px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 99px; font-size: 13px; transition: 0.2s; }
-        .lang-switch:hover { background: var(--primary); color: white; }
-
-        .container { display: flex; gap: 24px; max-width: 1400px; margin: 0 auto; height: 88vh; }
+        .header-btns { display: flex; gap: 10px; }
+        .container { display: flex; gap: 24px; max-width: 1400px; margin: 0 auto; height: 85vh; }
         
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 1000;
+            justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: var(--card-bg); padding: 30px; border-radius: 20px;
+            width: 500px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        #imageLightbox img { max-width: 90vw; max-height: 90vh; border-radius: 8px; box-shadow: 0 0 30px rgba(0,0,0,0.5); cursor: pointer; }
+
         .config-panel { 
             width: 380px; background: var(--card-bg); padding: 24px; border-radius: 18px; 
             box-shadow: 0 10px 30px rgba(0,0,0,0.05); display: flex; flex-direction: column; 
@@ -40,78 +51,78 @@
         }
         
         #drop-zone { 
-            border: 2px dashed var(--border); border-radius: 12px; padding: 30px 15px; 
+            border: 2px dashed var(--border); border-radius: 12px; padding: 25px 15px; 
             text-align: center; color: var(--text-secondary); cursor: pointer; 
-            background: #FAFAFA; margin-bottom: 20px; transition: all 0.3s ease;
+            background: #FAFAFA; margin-bottom: 15px; transition: 0.3s;
         }
-        #drop-zone.dragover { border-color: var(--primary); background-color: var(--primary-light); color: var(--primary); transform: scale(1.02); }
+        #drop-zone.dragover { border-color: var(--primary); background-color: var(--primary-light); color: var(--primary); }
         
-        .input-group { margin-bottom: 18px; }
-        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; }
         .modern-input-wrapper {
             display: flex; align-items: center; background: #F2F2F7;
-            border-radius: 10px; padding: 4px 4px 4px 12px; border: 1px solid transparent;
+            border-radius: 10px; padding: 4px 12px; border: 1px solid transparent;
         }
-        .modern-input-wrapper:focus-within { border-color: var(--primary); background: #fff; }
-        .modern-input-wrapper input { border: none; background: transparent; flex: 1; outline: none; font-size: 13px; height: 32px; }
+        .modern-input-wrapper input { border: none; background: transparent; flex: 1; outline: none; font-size: 13px; height: 36px; }
 
-        .btn-add-tag {
-            background: var(--primary); color: white; border: none; width: 32px; height: 32px;
-            border-radius: 8px; cursor: pointer; font-size: 20px;
-        }
+        .btn-add-tag { background: var(--primary); color: white; border: none; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; margin-left: 5px; }
+        .tag-container { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+        .tag { background: #E9E9EB; padding: 3px 8px; border-radius: 6px; font-size: 11px; cursor: pointer; }
 
-        .tag-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-        .tag { background: #E9E9EB; padding: 4px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+        textarea { width: 100%; border-radius: 10px; border: 1px solid var(--border); padding: 10px; font-size: 12px; background: #F2F2F7; resize: none; outline: none; box-sizing: border-box; }
+        #manualDescInput { height: 80px; margin-bottom: 8px; }
 
-        textarea { width: 100%; border-radius: 12px; border: 1px solid var(--border); padding: 12px; font-size: 13px; background: #F2F2F7; resize: none; height: 100px; outline: none; box-sizing: border-box; }
-        
         .preview-panel { flex: 1; background: var(--card-bg); padding: 24px; border-radius: 18px; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
         .list-area { flex: 1; overflow-y: auto; border-radius: 12px; background: #FAFAFA; border: 1px solid #EFEEF2; }
         
         table { width: 100%; border-collapse: collapse; }
-        th { background: #F2F2F7; padding: 14px; text-align: left; font-size: 12px; color: var(--text-secondary); }
-        td { padding: 10px 14px; border-bottom: 1px solid #EFEEF2; vertical-align: middle; }
+        th { background: #F2F2F7; padding: 12px; text-align: left; font-size: 12px; color: var(--text-secondary); position: sticky; top: 0; z-index: 10; }
+        td { padding: 12px; border-bottom: 1px solid #EFEEF2; vertical-align: middle; }
         
-        .btn { padding: 12px; border: none; border-radius: 12px; cursor: pointer; font-weight: 600; transition: 0.2s; margin-top: 8px; font-size: 14px;}
-        .btn-primary { background: var(--primary); color: white; width: 100%; }
-        .btn-ai { background: var(--ai-color); color: white; width: 100%; }
-        .btn-success { background: var(--success); color: white; width: 100%; }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .name-edit { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-weight: bold; margin-bottom: 5px; }
+        .alt-box-group { display: flex; align-items: center; gap: 8px; background: #fff; padding: 8px; border-radius: 8px; border: 1px solid #eee; }
+        .alt-input { flex: 1; border: none; font-size: 12px; outline: none; background: transparent; }
+        .alt-ai-style { color: var(--ai-alt); font-weight: 500; }
+
+        .btn { padding: 10px; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; transition: 0.2s; font-size: 13px; }
+        .btn-phrase { background: var(--ai-phrase); color: white; margin-top: 5px; }
+        .btn-alt { background: var(--ai-alt); color: white; margin-top: 5px; }
+        .btn-success { background: var(--success); color: white; margin-top: 5px; }
+        .btn-info { background: var(--info); color: white; margin-top: 5px; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); }
         
-        .thumb { width: 50px; height: 50px; object-fit: cover; border-radius: 8px; }
-        .name-edit { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; box-sizing: border-box;}
+        .btn-mini { padding: 4px 8px; font-size: 11px; background: #fff; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; margin-right: 4px;}
+        .btn-dl { color: var(--success); border-color: #D1F2D9; }
+        .btn-del { color: var(--danger); border-color: #FFD5D2; }
         
-        .btn-mini { padding: 6px 10px; font-size: 11px; background: #fff; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
-        .btn-del { color: var(--danger); border-color: #FFD5D2; background: #FFF5F5; margin-left: 5px; }
+        .thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; cursor: zoom-in; }
+        .chk-col { width: 40px; text-align: center; }
+        input[type="checkbox"] { transform: scale(1.2); cursor: pointer; }
+        
+        .status-bar { font-size: 12px; margin-top: 8px; text-align: right; color: var(--text-secondary); }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <h2 id="ui-title">Image Rename Pro + AI</h2>
-    <div class="lang-switch" onclick="toggleLanguage()" id="ui-lang-btn">Switch to English</div>
+    <h2 id="ui-title">图片重命名专业版 + AI</h2>
+    <div class="header-btns">
+        <button class="btn btn-outline" id="ui-settings-btn" onclick="openSettings()">⚙️ 设置 (API & 规则)</button>
+        <button class="btn btn-outline" onclick="toggleLanguage()" id="ui-lang-btn">English</button>
+    </div>
 </div>
 
 <div class="container">
     <div class="config-panel">
-        <h3 id="ui-config-h3">基础设置</h3>
-        
-        <div class="input-group">
-            <label>AIHubMix API Key</label>
-            <div class="modern-input-wrapper">
-                <input type="password" id="apiKeyInput" oninput="saveApiKey()">
-            </div>
-        </div>
-
-        <div id="drop-zone" onclick="document.getElementById('fileInput').click()">
-            <span id="ui-drop-text">📁 点击选择或拖入图片</span>
+        <div id="drop-zone">
+            <span id="ui-drop-text">📁 点击或拖入图片</span>
             <input type="file" id="fileInput" multiple accept="image/*" style="display:none">
         </div>
         
         <div class="input-group">
             <label id="ui-brand-label">品牌名称</label>
             <div class="modern-input-wrapper">
-                <input type="text" id="brandInput">
+                <input type="text" id="brandInput" oninput="refreshList()" placeholder="">
                 <button class="btn-add-tag" onclick="addTag('brand')">+</button>
             </div>
             <div id="brand-tags" class="tag-container"></div>
@@ -120,35 +131,55 @@
         <div class="input-group">
             <label id="ui-product-label">产品名称</label>
             <div class="modern-input-wrapper">
-                <input type="text" id="productInput">
+                <input type="text" id="productInput" oninput="refreshList()" placeholder="">
                 <button class="btn-add-tag" onclick="addTag('product')">+</button>
             </div>
             <div id="product-tags" class="tag-container"></div>
         </div>
         
-        <label id="ui-desc-label">图片描述 (每行一个)</label>
-        <textarea id="descText" oninput="refreshList()"></textarea>
-        
-        <button class="btn btn-ai" id="aiBtn" onclick="generateAIDescriptions()">✨ AI 自动生成描述 (英文短语)</button>
-        <button class="btn btn-primary" id="ui-refresh-btn" onclick="refreshList()">🔄 刷新预览</button>
-        <button class="btn btn-success" id="zipBtn" disabled onclick="downloadAll()">📦 打包下载 (ZIP)</button>
+        <label id="ui-manual-label">手动描述列表</label>
+        <textarea id="manualDescInput" oninput="refreshList()" placeholder=""></textarea>
+
+        <button class="btn btn-phrase" id="btnPhrase" onclick="runAI('phrase')">✨ AI 生成名称 (全部)</button>
+        <button class="btn btn-alt" id="btnAlt" onclick="runAI('alt')">📝 AI 生成 Alt (全部)</button>
+        <button class="btn btn-info" id="ui-txt-btn" onclick="downloadTxt()">📄 下载清单 (全部)</button>
+        <button class="btn btn-success" id="zipBtn" disabled onclick="downloadAll()">📦 打包下载 (全部)</button>
     </div>
 
     <div class="preview-panel">
-        <h3 id="ui-preview-h3">重命名预览</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3 id="ui-preview-h3" style="margin:0">重命名预览</h3>
+            <span id="ui-select-count" style="font-size:12px; font-weight:600; color:var(--primary);">已选择: 0</span>
+        </div>
         <div class="list-area">
             <table>
                 <thead>
                     <tr>
-                        <th width="60" id="ui-th-img">预览</th>
-                        <th id="ui-th-name">新文件名 (可编辑)</th>
+                        <th class="chk-col"><input type="checkbox" id="selectAll" onclick="toggleSelectAll(this.checked)"></th>
+                        <th width="80" id="ui-th-img">预览</th>
+                        <th id="ui-th-name">新文件名 & Alt Text</th>
                         <th width="120" id="ui-th-action">操作</th>
                     </tr>
                 </thead>
                 <tbody id="listContainer"></tbody>
             </table>
         </div>
-        <div id="status" style="font-size:12px; margin-top:8px; text-align:right; color:var(--text-secondary)"></div>
+        <div id="status" class="status-bar"></div>
+    </div>
+</div>
+
+<div id="imageLightbox" class="modal" onclick="closeLightbox()"><img id="lightboxImg" src=""></div>
+
+<div id="settingsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header" style="display:flex; justify-content:space-between; margin-bottom:15px;">
+            <h3 id="ui-setting-h3">⚙️ AI 配置中心</h3>
+            <button class="btn-mini" onclick="closeSettings()">✕</button>
+        </div>
+        <div class="input-group"><label>API Key</label><div class="modern-input-wrapper"><input type="password" id="settingApiKey"></div></div>
+        <div class="input-group"><label id="ui-setting-p-rule">文件名规则</label><textarea id="settingPhrasePrompt" style="height: 60px;"></textarea></div>
+        <div class="input-group"><label id="ui-setting-a-rule">Alt Text 规则</label><textarea id="settingAltPrompt" style="height: 60px;"></textarea></div>
+        <button class="btn btn-success" style="width:100%" id="ui-setting-save" onclick="saveSettings()">保存配置</button>
     </div>
 </div>
 
@@ -156,94 +187,171 @@
     let files = [];
     let currentLang = 'zh';
     let tags = { brand: [], product: [] };
+    let aiPhrases = []; 
+    let aiAlts = [];    
+    let selectedIndices = new Set(); 
+
+    const defaultSettings = {
+        apiKey: '',
+        phrasePrompt: "Extract exactly 3 core visual keywords for a filename (color, material, object). Connect with underscores. Return ONLY the phrase, lowercase.",
+        altPrompt: "Write a high-quality SEO Alt Text under 125 characters. Return ONLY the sentence."
+    };
 
     const i18n = {
         en: {
-            title: "Image Rename Pro + AI", langBtn: "切换至 中文", configH3: "Settings",
-            apiKeyPlaceholder: "Enter your API Token (Optional)...",
-            brandLabel: "Brand Name", brandPlaceholder: "Enter brand...", 
-            productLabel: "Product Name", productPlaceholder: "Enter product...",
-            descLabel: "Image Description (one per line)", descPlaceholder: "AI will fill this...",
-            aiBtn: "✨ AI Auto-describe (English)", refreshBtn: "🔄 Refresh Preview", 
-            zipBtn: "📦 Download ZIP", emptyMsg: "Waiting for images...",
-            thImg: "IMG", thName: "New Name", thAction: "Action",
-            dlSingle: "DL", del: "Del", dropZone: "📁 Click to Select or Drag Images"
+            title: "Image Rename Pro + AI", langBtn: "中文", settingsBtn: "⚙️ Settings",
+            brandLabel: "Brand", productLabel: "Product", manualLabel: "Manual",
+            brandPh: "Brand", productPh: "Name", manualPh: "One line per image...",
+            btnPhrase: "✨ AI Name", btnAlt: "📝 AI Alt", 
+            txtBtn: "📄 Download TXT", zipBtn: "📦 Download ZIP",
+            thImg: "Preview", thName: "New Name & Alt", thAction: "Action",
+            copy: "Copy", del: "Del", dl: "DL", dropZone: "📁 Click/Drag",
+            settingH3: "⚙️ AI Config", settingSave: "Save", ruleP: "Name Rule", ruleA: "Alt Rule",
+            previewH3: "Preview", statusDone: "Done.", exportTime: "Exported: ", selCount: "Selected: ",
+            all: "(All)", selected: "(Selected)"
         },
         zh: {
-            title: "图片重命名专业版 + AI", langBtn: "Switch to English", configH3: "基础设置",
-            apiKeyPlaceholder: "在此输入你的 API 令牌（选填）",
-            brandLabel: "品牌名称", brandPlaceholder: "输入品牌名，也可以点击+号添加",
-            productLabel: "产品名称", productPlaceholder: "输入产品名，也可以点击+号添加",
-            descLabel: "图片描述 (每行一个)", descPlaceholder: "粘贴描述列表 (选填)...",
-            aiBtn: "✨ AI 自动生成描述 (英文短语)", refreshBtn: "🔄 刷新预览", 
-            zipBtn: "📦 打包下载 (ZIP)", emptyMsg: "等待导入图片...",
-            thImg: "预览", thName: "新文件名", thAction: "操作",
-            dlSingle: "下载", del: "移除", dropZone: "📁 点击选择或拖入图片"
+            title: "图片重命名专业版 + AI", langBtn: "English", settingsBtn: "⚙️ 设置",
+            brandLabel: "品牌名称", productLabel: "产品名称", manualLabel: "手动描述",
+            brandPh: "品牌", productPh: "产品名称", manualPh: "每行对应一张图...",
+            btnPhrase: "✨ AI 生成名称", btnAlt: "📝 AI 生成 Alt", 
+            txtBtn: "📄 下载清单 (TXT)", zipBtn: "📦 打包下载 (ZIP)",
+            thImg: "预览", thName: "新文件名 & Alt Text", thAction: "操作",
+            copy: "复制", del: "移除", dl: "下载", dropZone: "📁 点击或拖入图片",
+            settingH3: "⚙️ AI 配置中心", settingSave: "保存配置", ruleP: "文件名规则", ruleA: "Alt Text 规则",
+            previewH3: "重命名预览", statusDone: "完成。", exportTime: "导出时间: ", selCount: "已选择: ",
+            all: "(全部)", selected: "(所选)"
         }
     };
 
-    // --- API Key 缓存逻辑 ---
-    function saveApiKey() {
-        const key = document.getElementById('apiKeyInput').value.trim();
-        localStorage.setItem('rename_ai_key', key);
+    window.onload = () => { loadSettings(); updateUI(); };
+
+    function openLightbox(src) { document.getElementById('lightboxImg').src = src; document.getElementById('imageLightbox').style.display = 'flex'; }
+    function closeLightbox() { document.getElementById('imageLightbox').style.display = 'none'; }
+    function openSettings() { document.getElementById('settingsModal').style.display = 'flex'; }
+    function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
+    
+    function saveSettings() {
+        localStorage.setItem('ai_config', JSON.stringify({
+            apiKey: document.getElementById('settingApiKey').value.trim(),
+            phrasePrompt: document.getElementById('settingPhrasePrompt').value.trim(),
+            altPrompt: document.getElementById('settingAltPrompt').value.trim()
+        }));
+        closeSettings();
+    }
+    function loadSettings() {
+        const saved = JSON.parse(localStorage.getItem('ai_config') || JSON.stringify(defaultSettings));
+        document.getElementById('settingApiKey').value = saved.apiKey;
+        document.getElementById('settingPhrasePrompt').value = saved.phrasePrompt;
+        document.getElementById('settingAltPrompt').value = saved.altPrompt;
     }
 
-    function loadApiKey() {
-        const savedKey = localStorage.getItem('rename_ai_key');
-        if (savedKey) {
-            document.getElementById('apiKeyInput').value = savedKey;
-        }
-    }
-
-    // --- 拖拽功能 ---
     const dropZone = document.getElementById('drop-zone');
-    const fileInput = document.getElementById('fileInput');
-
+    dropZone.onclick = () => document.getElementById('fileInput').click();
     dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
-    dropZone.ondragleave = () => { dropZone.classList.remove('dragover'); };
-    dropZone.ondrop = (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('dragover');
-        addFiles(e.dataTransfer.files);
-    };
+    dropZone.ondragleave = () => dropZone.classList.remove('dragover');
+    dropZone.ondrop = (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); addFiles(e.dataTransfer.files); };
+    document.getElementById('fileInput').onchange = (e) => addFiles(e.target.files);
 
-    fileInput.onchange = (e) => addFiles(e.target.files);
-
-    function addFiles(incomingFiles) {
-        const newFiles = Array.from(incomingFiles).filter(f => f.type.startsWith('image/'));
-        files = [...files, ...newFiles].sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true}));
+    function addFiles(incoming) {
+        const newFiles = Array.from(incoming).filter(f => f.type.startsWith('image/'));
+        newFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true}));
+        newFiles.forEach(() => { aiPhrases.push(""); aiAlts.push(""); });
+        files = [...files, ...newFiles];
         refreshList();
     }
 
-    // --- AI 逻辑 ---
-    async function generateAIDescriptions() {
-        const apiKey = document.getElementById('apiKeyInput').value.trim();
-        if (!apiKey) { alert(currentLang === 'zh' ? "请输入 API Key！" : "Please input API Key!"); return; }
-        if (files.length === 0) return;
+    function toggleSelectAll(checked) {
+        selectedIndices = checked ? new Set(files.map((_, i) => i)) : new Set();
+        refreshList();
+    }
+    function updateSelect(idx, checked) {
+        checked ? selectedIndices.add(idx) : selectedIndices.delete(idx);
+        updateCounters();
+    }
+    
+    function updateCounters() {
+        const L = i18n[currentLang];
+        const hasSelection = selectedIndices.size > 0;
+        const countSuffix = hasSelection ? `${L.selected} [${selectedIndices.size}]` : L.all;
+        
+        document.getElementById('ui-select-count').innerText = `${L.selCount} ${selectedIndices.size}`;
+        document.getElementById('selectAll').checked = selectedIndices.size === files.length && files.length > 0;
+        
+        // 动态更新所有动作按钮文字
+        document.getElementById('btnPhrase').innerText = `${L.btnPhrase} ${countSuffix}`;
+        document.getElementById('btnAlt').innerText = `${L.btnAlt} ${countSuffix}`;
+        document.getElementById('ui-txt-btn').innerText = `${L.txtBtn} ${countSuffix}`;
+        document.getElementById('zipBtn').innerText = `${L.zipBtn} ${countSuffix}`;
+    }
 
-        const btn = document.getElementById('aiBtn');
+    function downloadSingle(idx) {
+        const finalName = document.getElementById(`name_${idx}`).value;
+        saveAs(files[idx], finalName);
+    }
+
+    function downloadTxt() {
+        const targets = selectedIndices.size > 0 ? Array.from(selectedIndices) : files.map((_, i) => i);
+        if (targets.length === 0) return;
+        saveAs(new Blob([generateTxtContent(targets)], {type: "text/plain"}), `Image_List.txt`);
+    }
+
+    async function downloadAll() {
+        const targets = selectedIndices.size > 0 ? Array.from(selectedIndices) : files.map((_, i) => i);
+        if (targets.length === 0) return;
+        const zip = new JSZip();
+        targets.forEach(idx => zip.file(document.getElementById(`name_${idx}`).value, files[idx]));
+        const blob = await zip.generateAsync({type: "blob"});
+        saveAs(blob, `Images_Batch.zip`);
+    }
+
+    function generateTxtContent(targetIndices) {
+        let content = `Exported: ${new Date().toLocaleString()}\n---\n`;
+        targetIndices.forEach(idx => {
+            content += `FILE: ${document.getElementById(`name_${idx}`).value}\nALT: ${document.getElementById(`alt_${idx}`).value}\n---\n`;
+        });
+        return content;
+    }
+
+    async function runAI(type) {
+        const config = JSON.parse(localStorage.getItem('ai_config') || JSON.stringify(defaultSettings));
+        if (!config.apiKey) return alert("请在设置中填写 API Key");
+
+        const targets = selectedIndices.size > 0 ? Array.from(selectedIndices) : files.map((_, i) => i);
+        if (targets.length === 0) return alert("列表中没有图片");
+
+        const btn = document.getElementById(type === 'phrase' ? 'btnPhrase' : 'btnAlt');
+        const originalText = btn.innerText;
         btn.disabled = true;
-        btn.innerText = "⏳ AI Processing...";
-
-        let results = [];
-        for (let i = 0; i < files.length; i++) {
-            document.getElementById('status').innerText = `Analyzing ${i+1}/${files.length}...`;
+        
+        let processed = 0;
+        for (const idx of targets) {
+            document.getElementById('status').innerText = `AI 正在处理: ${++processed} / ${targets.length}`;
             try {
-                const desc = await callVisionAPI(files[i], apiKey);
-                results.push(desc);
-            } catch (e) { results.push("error"); }
+                const prompt = type === 'phrase' ? config.phrasePrompt : config.altPrompt;
+                const result = await callVisionAPI(files[idx], config.apiKey, prompt);
+                
+                if (type === 'phrase') {
+                    aiPhrases[idx] = result.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+                } else {
+                    aiAlts[idx] = result;
+                }
+                refreshList(); 
+            } catch (err) {
+                console.error("AI Error:", err);
+                document.getElementById('status').innerText = `第 ${idx+1} 张图失败: ${err.message}`;
+            }
         }
-
-        document.getElementById('descText').value = results.join('\n');
+        
         btn.disabled = false;
-        updateUI(); 
-        refreshList();
+        btn.innerText = originalText;
+        document.getElementById('status').innerText = i18n[currentLang].statusDone;
     }
 
-    async function callVisionAPI(file, key) {
-        const base64 = await new Promise((resolve) => {
+    async function callVisionAPI(file, key, prompt) {
+        const base64 = await new Promise((r) => {
             const reader = new FileReader();
-            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onload = () => r(reader.result.split(',')[1]);
             reader.readAsDataURL(file);
         });
 
@@ -255,114 +363,79 @@
                 messages: [{
                     role: "user",
                     content: [
-                        { 
-                            type: "text", 
-                            text: "Describe this image in a concise English phrase (max 3 words). Use underscores instead of spaces. NO CHINESE. Example: blue_glass_bottle. Return ONLY the phrase." 
-                        },
+                        { type: "text", text: prompt },
                         { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64}` } }
                     ]
-                }],
-                max_tokens: 30
+                }]
             })
         });
 
+        if (!response.ok) throw new Error("API 请求失败");
         const data = await response.json();
-        return data.choices[0].message.content.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+        return data.choices[0].message.content.trim();
     }
 
-    // --- 界面逻辑 ---
     function refreshList() {
         const brand = document.getElementById('brandInput').value.trim();
         const product = document.getElementById('productInput').value.trim();
-        const descs = document.getElementById('descText').value.split('\n').map(v => v.trim());
+        const manualDescs = document.getElementById('manualDescInput').value.split('\n');
         const container = document.getElementById('listContainer');
         container.innerHTML = '';
-        document.getElementById('zipBtn').disabled = (files.length === 0);
-
-        if (files.length === 0) {
-            container.innerHTML = `<tr><td colspan="3" style="text-align:center;color:#ccc;padding-top:100px;">${i18n[currentLang].emptyMsg}</td></tr>`;
-            return;
-        }
+        document.getElementById('zipBtn').disabled = files.length === 0;
 
         files.forEach((file, i) => {
-            const ext = file.name.split('.').pop().toLowerCase();
+            const ext = file.name.split('.').pop();
             const sn = (i + 1).toString().padStart(2, '0');
-            const d = descs[i] || "";
-            const parts = [brand, product, sn, d].filter(p => p !== "");
-            const newName = parts.join('_') + '.' + ext;
-            
+            let desc = (manualDescs[i] && manualDescs[i].trim()) ? manualDescs[i].trim().replace(/\s+/g, '_') : aiPhrases[i];
+            let newName = (!brand && !product && !desc) ? file.name : [brand, product, sn, desc].filter(Boolean).join('_') + '.' + ext;
+            let altVal = aiAlts[i] || (desc ? desc.replace(/_/g, ' ') : "");
+            const imgUrl = URL.createObjectURL(file);
+
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td><img src="${URL.createObjectURL(file)}" class="thumb"></td>
-                <td><input type="text" class="name-edit" id="name_${i}" value="${newName}"></td>
+                <td class="chk-col"><input type="checkbox" ${selectedIndices.has(i)?'checked':''} onclick="updateSelect(${i}, this.checked)"></td>
+                <td><img src="${imgUrl}" class="thumb" onclick="openLightbox('${imgUrl}')"></td>
                 <td>
-                    <button class="btn-mini" onclick="downloadSingle(${i})">${i18n[currentLang].dlSingle}</button>
-                    <button class="btn-mini btn-del" onclick="removeImage(${i})">${i18n[currentLang].del}</button>
+                    <input type="text" class="name-edit" id="name_${i}" value="${newName}">
+                    <div class="alt-box-group">
+                        <input type="text" class="alt-input ${aiAlts[i]?'alt-ai-style':''}" id="alt_${i}" value="${altVal}">
+                        <button class="btn-mini" onclick="copyId('alt_${i}')">${i18n[currentLang].copy}</button>
+                    </div>
+                </td>
+                <td>
+                    <button class="btn-mini btn-dl" onclick="downloadSingle(${i})">${i18n[currentLang].dl}</button>
+                    <button class="btn-mini btn-del" onclick="removeFile(${i})">${i18n[currentLang].del}</button>
                 </td>
             `;
             container.appendChild(tr);
         });
+        updateCounters();
     }
 
-    window.onload = () => {
-        const saved = localStorage.getItem('rename_tags_ai_vfinal');
-        if (saved) { tags = JSON.parse(saved); renderTags('brand'); renderTags('product'); }
-        loadApiKey(); // 加载缓存的 API Key
-        updateUI();
-    };
-
-    function removeImage(idx) { files.splice(idx,1); refreshList(); }
-    function downloadSingle(idx) {
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(files[idx]);
-        a.download = document.getElementById(`name_${idx}`).value;
-        a.click();
-    }
-
-    function toggleLanguage() { currentLang = currentLang === 'en' ? 'zh' : 'en'; updateUI(); }
-
-    function updateUI() {
-        const lang = i18n[currentLang];
-        document.getElementById('ui-title').innerText = lang.title;
-        document.getElementById('ui-lang-btn').innerText = lang.langBtn;
-        document.getElementById('ui-config-h3').innerText = lang.configH3;
-        document.getElementById('ui-drop-text').innerText = lang.dropZone;
-        document.getElementById('apiKeyInput').placeholder = lang.apiKeyPlaceholder; 
-        document.getElementById('ui-brand-label').innerText = lang.brandLabel;
-        document.getElementById('brandInput').placeholder = lang.brandPlaceholder;
-        document.getElementById('ui-product-label').innerText = lang.productLabel;
-        document.getElementById('productInput').placeholder = lang.productPlaceholder;
-        document.getElementById('ui-desc-label').innerText = lang.descLabel;
-        document.getElementById('descText').placeholder = lang.descPlaceholder;
-        document.getElementById('aiBtn').innerText = lang.aiBtn;
-        document.getElementById('ui-refresh-btn').innerText = lang.refreshBtn;
-        document.getElementById('zipBtn').innerText = lang.zipBtn;
-        document.getElementById('ui-th-img').innerText = lang.thImg;
-        document.getElementById('ui-th-name').innerText = lang.thName;
-        document.getElementById('ui-th-action').innerText = lang.thAction;
-        if (files.length > 0) refreshList();
-    }
-
+    function removeFile(i) { files.splice(i, 1); aiPhrases.splice(i, 1); aiAlts.splice(i, 1); selectedIndices.delete(i); refreshList(); }
+    function toggleLanguage() { currentLang = currentLang === 'zh' ? 'en' : 'zh'; updateUI(); }
+    function copyId(id) { const el = document.getElementById(id); el.select(); document.execCommand('copy'); }
     function addTag(type) {
         const val = document.getElementById(type + 'Input').value.trim();
-        if (val && !tags[type].includes(val)) {
-            tags[type].push(val);
-            localStorage.setItem('rename_tags_ai_vfinal', JSON.stringify(tags));
-            renderTags(type);
-        }
+        if (val && !tags[type].includes(val)) { tags[type].push(val); renderTags(type); }
     }
-
     function renderTags(type) {
-        document.getElementById(type + '-tags').innerHTML = tags[type].map(t => `
-            <div class="tag" onclick="document.getElementById('${type}Input').value='${t}';refreshList();">${t}</div>
-        `).join('');
+        document.getElementById(type + '-tags').innerHTML = tags[type].map(t => `<div class="tag" onclick="document.getElementById('${type}Input').value='${t}';refreshList();">${t}</div>`).join('');
     }
-
-    async function downloadAll() {
-        const zip = new JSZip();
-        files.forEach((f, i) => zip.file(document.getElementById(`name_${i}`).value, f));
-        const blob = await zip.generateAsync({type: "blob"});
-        saveAs(blob, "AI_Images_Pack.zip");
+    function updateUI() {
+        const L = i18n[currentLang];
+        document.getElementById('ui-title').innerText = L.title;
+        document.getElementById('ui-lang-btn').innerText = L.langBtn;
+        document.getElementById('ui-settings-btn').innerText = L.settingsBtn;
+        document.getElementById('ui-drop-text').innerText = L.dropZone;
+        document.getElementById('ui-brand-label').innerText = L.brandLabel;
+        document.getElementById('ui-product-label').innerText = L.productLabel;
+        document.getElementById('ui-manual-label').innerText = L.manualLabel;
+        document.getElementById('ui-preview-h3').innerText = L.previewH3;
+        document.getElementById('ui-th-img').innerText = L.thImg;
+        document.getElementById('ui-th-name').innerText = L.thName;
+        document.getElementById('ui-th-action').innerText = L.thAction;
+        refreshList();
     }
 </script>
 </body>
